@@ -41,6 +41,7 @@ jobs:
         pip install numpy
         pip install pandas
         pip install sortedcontainers
-        pip install tensorflow
-        pip install cdxbasics
+        pip install tensorflow>=2.10
+        pip install tensorflow_probability>=0.14
+        pip install cdxbasics>=0.2.23
         pytest
