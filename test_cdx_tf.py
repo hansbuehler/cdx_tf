@@ -7,6 +7,7 @@ Created on Tue Apr 14 21:24:52 2020
 import unittest
 import pickle
 import cdx_tf.util as util
+from cdxbasics.logger import Logger
 
 import numpy as np
 import pandas as pd
