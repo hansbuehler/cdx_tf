@@ -42,7 +42,7 @@ setuptools.setup(
 # however, there is no actual dependency on them. The code itself
 # will roll over if either is not present.
     install_requires=[
-         'cdxbasics', 'tensorflow>=2.10', 'tensorflow-probability>=0.14', 'ray'
+         'cdxbasics', 'tensorflow>=2.10', 'tensorflow-probability>=0.14'
      ],
     classifiers=[
         "Programming Language :: Python :: 3",

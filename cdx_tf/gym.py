@@ -48,10 +48,12 @@ class Gym(tf.keras.Model):
         2) implement build/call.
            The data passed to each will be of the form of the dictionaries in environment.trn.tf_data.
         3) Set the class variable CACHE_VERSION to a string version
+        4) Provide a static LOSS_NAME member if the primary loss objective is not called 'loss' (e.g. the data in your returned dictionary)
         4) Implement from_config / get_config. Without doing this, the system cannot create/restore the gym from a cache
     """
     
     CACHE_VERSION = "0.0.1"
+    LOSS_NAME     = "loss" 
     
     def __init__(self, config          : Config,
                        name            : str = None,
@@ -61,17 +63,17 @@ class Gym(tf.keras.Model):
         """
         Initializes the cachable gym
         ------------------------------
-            cache_uid : Config or str
-                Unique ID for this gym for caching.
-                You can pass a 'Config' object in which case it will call config_ID.cache_unique_id.
+            config : Config
+                Configuration for the model.
+                Unless cache_uid is provided, this determines the unique ID of the gym.
             name : str
                 Name of the object
             dtype : tf.DType
                 Type of the gym
             trainable : bool
                 Whether the gym is trainable.
-            cache_version : int
-                Additional version for the cache. This allows updating caches even if no config changes (e.g when a bug in the code was found)
+            cache_uid : int
+                Unique ID for this model setup. If not provided, config.unique_id will be used.
         """
         tf.keras.Model.__init__(self, name=name, dtype=dtype, trainable=trainable )
 
@@ -82,7 +84,7 @@ class Gym(tf.keras.Model):
     # -------------------
     # syntatic sugar
     # -------------------
-
+    
     @property
     def num_trainable_weights(self) -> int:
         """ Returns the number of weights. The gym must have been call()ed once """
@@ -177,7 +179,6 @@ class Environment( PrettyDict ):
                           tf_val_data        : dict = None,
                           trn_sample_weights : np.ndarray = None,
                           val_sample_weights : np.ndarray = None,
-                          key_loss           : str = "loss",
                           **kwargs ):
         """
         Initialize environment.
@@ -199,10 +200,6 @@ class Environment( PrettyDict ):
                 Sample weights for the training data set. None for the uniform distribution.
             val_sample_weights : np.ndarray
                 Sample weights for the validation data set. None for the uniform distribution.
-            key_loss : str
-                Name of the primary loss vector returned from a gym predict call.
-                The environment will use thise to extract the current loss.
-                This is used for determining the best loss (with the training data).
             **kwargs : 
                 Other arguments to be passed to 'self', see PrettyDict.
                 In particular, this allows assigning member values to the environment as follows:
@@ -214,11 +211,10 @@ class Environment( PrettyDict ):
         _log.verify( not gym is None, "'gym' cannot be None")
         _log.verify( isinstance(gym, Gym), "'gym' must be derived from 'Gym'. Found type '%s'", type(gym).__name__)
         _log.verify( isinstance( tf_trn_data, Mapping), "tf_trn_data must be a Mapping. Found type '%s'", type(tf_trn_data).__name__ if not tf_trn_data is None else "None")
-        _log.verify( key_loss != "", "'key_loss' cannot be an empty string")
         if not tf_val_data is None: _log.verify( isinstance( tf_val_data, Mapping), "tf_val_data must be a Mapping. Found type '%s'", type(tf_val_data).__name__)
         
         self.gym                = gym
-        self.key_loss           = str(key_loss)
+        self.loss_name          = gym.LOSS_NAME
         self.trn                = PrettyDict()
         self.trn.tf_data        = tfCast( tf_trn_data )
         self.trn.sample_weights = np.asarray( trn_sample_weights ) if not trn_sample_weights is None else None
@@ -273,9 +269,9 @@ class Environment( PrettyDict ):
         pack              = PrettyDict()
         pack.trn          = PrettyDict()        
         pack.trn.results  = npCast( self.gym(self.trn.tf_data) )
-        _log.verify( isinstance(pack.trn.results, np.ndarray) or ( isinstance(pack.trn.results, Mapping) and self.key_loss in pack.trn.results), "The data returned from the gym must either be the loss tensor, or be a dictionary with '%s' entry as specified by 'loss_key'. Model returned data type %s", self.key_loss, str(type(pack.trn.results)))
+        _log.verify( isinstance(pack.trn.results, np.ndarray) or ( isinstance(pack.trn.results, Mapping) and self.loss_name in pack.trn.results), "The data returned from the gym must either be the loss tensor, or be a dictionary with '%s' entry as specified by '%s.LOSS_NAME'. Model returned data type %s", self.loss_name, type(self.gym).__name__, str(type(pack.trn.results)))
 
-        pack.trn.loss     = pack.trn.results if isinstance(pack.trn.results, np.ndarray) else pack.trn.results[self.key_loss]
+        pack.trn.loss     = pack.trn.results if isinstance(pack.trn.results, np.ndarray) else pack.trn.results[self.loss_name]
         pack.trn.loss     = pack.trn.loss[:,0] if len(pack.trn.loss.shape) == 2 and pack.trn.loss.shape[1] == 1 else pack.trn.loss
         _log.verify( len(pack.trn.loss.shape) == 1, "'loss' must be a vector or of shape (N,1). Found tensor of shape %s", pack.trn.loss.shape)
         if not self.trn.sample_weights is None:
@@ -288,7 +284,7 @@ class Environment( PrettyDict ):
         else:
             pack.val          = PrettyDict()
             pack.val.results  = npCast( gym(tf_val_data) ) 
-            pack.val.loss     = pack.val.results if isinstance(pack.val.results, np.ndarray) else pack.val.results[self.key_loss]
+            pack.val.loss     = pack.val.results if isinstance(pack.val.results, np.ndarray) else pack.val.results[self.loss_name]
             pack.val.loss     = pack.val.loss[:,0] if len(pack.val.loss.shape) == 2 and pack.val.loss.shape[1] == 1 else pack.val.loss
             pack.val.loss     = np.sum( self.val.sample_weights * pack.val.loss ) if not self.val.sample_weights is None else np.mean( pack.val.loss )     
 
@@ -687,8 +683,8 @@ def train(   environment    : Environment,
         """ No gym cached yet """
         verbose.report(1, "Model generated. Preparing training for %ld epochs", epochs )
         gym.compile(    optimizer        = create_optimizer(config.train.optimizer),
-                        loss             = { environment.key_loss : default_loss },
-                        weighted_metrics = { environment.key_loss : default_loss },
+                        loss             = { environment.loss_name : default_loss },
+                        weighted_metrics = { environment.loss_name : default_loss },
                         run_eagerly      = run_eagerly)
         environment.set_model( gym, cached=False )
  
