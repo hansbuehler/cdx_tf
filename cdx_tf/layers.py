@@ -80,7 +80,7 @@ def dense_model( nInput    : int,
     x1, x2    = ( inp, inp if zero_model else None )
     for d in range(depth):
         x1, x2    = dense( width, activation, x1, x2 )
-    x1, x2 = dense( nOutput, final_activation, x1, x2 ) 
+    x1, x2 = dense( nOutput, final_act, x1, x2 ) 
     x  = tf.keras.layers.Subtract()([x1, x2]) if not x2 is None else x1
     m  = tf.keras.Model( inputs=inp, outputs=x, name=name )
     if zero_model:

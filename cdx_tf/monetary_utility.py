@@ -8,6 +8,8 @@ March 1st, 2023
 
 from cdxbasics.logger import Logger
 from cdxbasics.config import Config, Float, Int
+from cdxbasics.util import fmt_list
+from cdxbasics.prettydict import PrettyDict as pdct
 from .util import tf
 _log = Logger(__file__)
 
@@ -132,7 +134,7 @@ def tf_utility( utility : str, lmbda : float, X : tf.Tensor, y : tf.Tensor = 0.,
         u = (1. + lmbda * gains - tf.math.sqrt( 1. + (lmbda * gains) ** 2 )) / lmbda  - y
         d = 1 - lmbda * gains / tf.math.sqrt( 1. + (lmbda * gains) ** 2)
         
-    _log.verify( not u is None, "Unknown utility function '%s'. Use one of %s", utility, fmt_list( MonetaryUtility.UTILITIES )  )
+    _log.verify( not u is None, "Unknown utility function '%s'. Use one of %s", utility, fmt_list( UTILITIES )  )
     
     u = tf.debugging.check_numerics(u, "Numerical error computing u in %s. Turn on tf.enable_check_numerics to find the root cause.\nX: %s\ny : %s" % (__file__, str(X), str(y)) )
     d = tf.debugging.check_numerics(d, "Numerical error computing d in %s. Turn on tf.enable_check_numerics to find the root cause.\nX: %s\ny : %s" % (__file__, str(X), str(y)) )

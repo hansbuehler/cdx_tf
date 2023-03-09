@@ -32,10 +32,10 @@ def hard_clip( x : tf.Tensor, x_min : tf.Tensor, x_max : tf.Tensor, validate_bou
     
     """
     if not validate_bounds:
-        x_ = tf.where( maxx > minx, tf.clip_by_value( x, minx, maxx ), 0.5*(maxx+minx) )
+        x_ = tf.where( x_max > x_min, tf.clip_by_value( x, x_min, x_max ), 0.5*(x_max+x_min) )
         p  = tf.math.abs( x - x_ ) ** 2
         return x_, p
-    with tf.control_dependencies( [ tf.debugging.assert_greate( maxx, minx, message="Upper bound for trades must be bigger than lower bound" ) ] ):
+    with tf.control_dependencies( [ tf.debugging.assert_greate( x_max, x_min, message="Upper bound for trades must be bigger than lower bound" ) ] ):
         return hard_clip( x, x_min, x_max, validate_bounds = False )
     
 try:

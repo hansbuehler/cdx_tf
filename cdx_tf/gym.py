@@ -12,7 +12,7 @@ from collections.abc import Mapping
 from cdxbasics.config import Config, Int, Float
 from cdxbasics.verbose import Context
 from cdxbasics.logger import Logger
-from cdxbasics.prettydict import PrettyDict as PrettyDict
+from cdxbasics.prettydict import PrettyDict
 from cdxbasics.util import uniqueHash, fmt_now, fmt_seconds
 from cdxbasics.subdir import SubDir, uniqueFileName48, CacheMode
 from .util import npCast, tfCast, def_dtype
@@ -126,7 +126,7 @@ class Gym(tf.keras.Model):
             def from_config( tf_config : dict ):
                 return Gym.from_config_default( MyGym, tf_config )
         """
-        _log.verify( tf_config['cache_version'] == CACHE_VERSION, "Error reading configuration from cache for '%s'': version mismatch. Found version %s, but current code is version %s", Class.__name__, tf_config['cache_version'], Class.CACHE_VERSION )        
+        _log.verify( tf_config['cache_version'] == Class.CACHE_VERSION, "Error reading configuration from cache for '%s'': version mismatch. Found version %s, but current code is version %s", Class.__name__, tf_config['cache_version'], Class.CACHE_VERSION )        
         return Class( config        = tf_config['config'],
                       name          = tf_config['name'],
                       dtype         = tf_config['dtype'],
@@ -283,7 +283,7 @@ class Environment( PrettyDict ):
             pack.val = None
         else:
             pack.val          = PrettyDict()
-            pack.val.results  = npCast( gym(tf_val_data) ) 
+            pack.val.results  = npCast( self.gym(tf_val_data) ) 
             pack.val.loss     = pack.val.results if isinstance(pack.val.results, np.ndarray) else pack.val.results[self.loss_name]
             pack.val.loss     = pack.val.loss[:,0] if len(pack.val.loss.shape) == 2 and pack.val.loss.shape[1] == 1 else pack.val.loss
             pack.val.loss     = np.sum( self.val.sample_weights * pack.val.loss ) if not self.val.sample_weights is None else np.mean( pack.val.loss )     
@@ -637,7 +637,7 @@ def train(   environment    : Environment,
     
     # caching
     def_directory_name       = gym.cache_def_directory_name + "/batch_size_" + (str(batch_size) if not batch_size is None else "default")
-    cache_config             = pdct()
+    cache_config             = PrettyDict()
     cache_config.cache_mode  = config.caching("mode", CacheMode.ON, CacheMode.MODES, "Caching strategy: %s" % CacheMode.HELP)
     cache_config.cache_freq  = config.caching("epoch_freq", 10, Int>0, "How often to cache results, in number of epochs")
     cache_dir                = config.caching("directory", "./.cache/" + gym.cache_def_directory_name, str, "Caching directory")
@@ -664,7 +664,7 @@ def train(   environment    : Environment,
         config.progress.mark_done()
         config.train.optimizer.mark_done()
                                                                                
-        gym  = keras.models.load_model( cache_config.cache_dir.path + MODEL_FILE  )
+        gym  = tf.keras.models.load_model( cache_config.cache_dir.path + MODEL_FILE  )
         epochs = epochs - (progress_data.current_epoch+1)
         verbose.report(1, "Loaded gym from cache %s. Model was trained for %ld epochs.", cache_config.cache_dir.path, progress_data.current_epoch )
         environment.set_model( gym, cached=True )
