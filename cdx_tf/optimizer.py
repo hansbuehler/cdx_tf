@@ -7,7 +7,7 @@ June 30, 2022
 """
 
 from cdxbasics.logger import Logger
-from cdxbasics.config import Confiog
+from cdxbasics.config import Config, Float, Int
 from .util import tf
 import inspect as inspect
 _log = Logger(__file__)

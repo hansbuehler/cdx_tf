@@ -7,7 +7,7 @@ March 1st, 2023
 """
 
 from cdxbasics.logger import Logger
-from cdxbasics.config import Config
+from cdxbasics.config import Config, Float, Int
 from .util import tf
 _log = Logger(__file__)
 

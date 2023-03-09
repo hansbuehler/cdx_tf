@@ -15,8 +15,8 @@ from cdxbasics.logger import Logger
 from cdxbasics.prettydict import PrettyDict as PrettyDict
 from cdxbasics.util import uniqueHash, fmt_now, fmt_seconds
 from cdxbasics.subdir import SubDir, uniqueFileName48, CacheMode
-from cdx_tf.util import npCast, tfCast, def_dtype
-from cdx_tf.optimizer import create_optimizer
+from .util import npCast, tfCast, def_dtype
+from .optimizer import create_optimizer
 import tensorflow as tf
 import numpy as np
 import time as time
@@ -432,7 +432,7 @@ class Callback(tf.keras.callbacks.Callback):
     
     def __init__(self, *, environment    : Environment,
                           training_info  : TrainingInfo,
-                          progress_data  : progress_data,
+                          progress_data  : ProgressData,
                           cache_config   : PrettyDict,
                           verbose        : Context = Context() ):
         """
@@ -474,7 +474,7 @@ class Callback(tf.keras.callbacks.Callback):
     def write_cache(self):
         """ Write cache to disk """
         if self.cache_last_epoch >= self.progress_data.current_epoch:
-            assert self.cache_last_epoch == self.progress_data.current_epoch, "Interal error: %ld > %ld ?", (self.cache_last_epoch, self.progress_data.current_epoch)
+            assert self.cache_last_epoch == self.progress_data.current_epoch, "Interal error: %ld > %ld ?" % (self.cache_last_epoch, self.progress_data.current_epoch)
             return
         assert self.progress_data.current_epoch >= 0, "Internal error: current epoch is -1"
         self.cache_dir.write( PROGRESS_FILE, self.progess_data )
@@ -660,7 +660,7 @@ def train(   environment    : Environment,
     if not progress_data is None:
         """ Handle cached gym """
         assert not progress_data.cache_last_epoch is None
-        assert progress_data.cache_last_epoch <= progress_data.current_epoch, (progress_data.cache_last_epoch, progress_data.current_epoch
+        assert progress_data.cache_last_epoch <= progress_data.current_epoch, "Invalid epoch data: %ld %ld" % (progress_data.cache_last_epoch, progress_data.current_epoch)
         config.progress.mark_done()
         config.train.optimizer.mark_done()
                                                                                
