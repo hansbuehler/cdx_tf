@@ -283,7 +283,7 @@ class Environment( PrettyDict ):
             pack.val = None
         else:
             pack.val          = PrettyDict()
-            pack.val.results  = npCast( self.gym(tf_val_data) ) 
+            pack.val.results  = npCast( self.gym(self.val.tf_data) ) 
             pack.val.loss     = pack.val.results if isinstance(pack.val.results, np.ndarray) else pack.val.results[self.loss_name]
             pack.val.loss     = pack.val.loss[:,0] if len(pack.val.loss.shape) == 2 and pack.val.loss.shape[1] == 1 else pack.val.loss
             pack.val.loss     = np.sum( self.val.sample_weights * pack.val.loss ) if not self.val.sample_weights is None else np.mean( pack.val.loss )     
